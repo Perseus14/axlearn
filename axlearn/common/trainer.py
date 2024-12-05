@@ -579,7 +579,7 @@ class SpmdTrainer(Module):
             with self.checkpointer:
                 logging.info("Starting loop...")
                 start_time = time.perf_counter()
-                init_time = time.perf_counter()
+                init_time = start_time # Separate variable for gcp monitoring
                 num_steps = 0
                 output = None
                 stop_trace_step = None
@@ -611,7 +611,10 @@ class SpmdTrainer(Module):
 
                         jax_process_index = jax.process_index()
 
-                        logging.info("Jax process id: %s", jax_process_index)
+                        logging.info("Step: %s", str(num_steps))
+                        logging.info(
+                            "Jax process id: %s", str(jax_process_index)
+                        )
 
                         if jax_process_index == 0:
                             self.gcp_workload_monitor.send_performance_metric(
@@ -639,7 +642,8 @@ class SpmdTrainer(Module):
                                     if is_tpu_active(
                                         local_device_id=global_acc_ids.index(
                                             int(acc_id)
-                                        ),  # TPU monitoring requires local
+                                        ),
+                                        # TPU monitoring requires local
                                         # device id, not global. Workaround to
                                         # provide local device id is the
                                         # assumption that the index of the tpu
@@ -649,11 +653,19 @@ class SpmdTrainer(Module):
                                         chip_type=chip_type,
                                     ):
                                         logging.info(
-                                            "TPU device %s is active. Sending heartbeat.",
+                                            "TPU device %s is active. "
+                                            "Sending heartbeat.",
                                             str(acc_id),
                                         )
                                         self.gcp_workload_monitor.send_heartbeat_metric(
-                                            acc_index=str(acc_id),
+                                            acc_local_index=str(global_acc_ids.index(int(acc_id))),
+                                            # Heartbeat metric requires local
+                                            # device id, not global. Workaround to
+                                            # provide local device id is the
+                                            # assumption that the index of the tpu
+                                            # id while identifying attached tpu ids
+                                            # in jax process is local id.
+                                            # TODO verify this assumption using tpu chip coordinates.
                                             jax_process_index=str(jax_process_index),
                                         )
                                     else:
@@ -670,7 +682,14 @@ class SpmdTrainer(Module):
                                     "Non-TPU device %s. Sending heartbeat.", acc_id
                                 )
                                 self.gcp_workload_monitor.send_heartbeat_metric(
-                                    acc_index=str(acc_id),
+                                    acc_local_index=str(global_acc_ids.index(int(acc_id))),
+                                    # Heartbeat metric requires local
+                                    # device id, not global. Workaround to
+                                    # provide local device id is the
+                                    # assumption that the index of the tpu
+                                    # id while identifying attached tpu ids
+                                    # in jax process is local id.
+                                    # TODO verify this assumption using tpu chip coordinates.
                                     jax_process_index=str(jax_process_index),
                                 )
 
