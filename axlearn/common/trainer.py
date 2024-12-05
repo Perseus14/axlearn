@@ -607,7 +607,7 @@ class SpmdTrainer(Module):
 
                         jax_process_index = jax.process_index()
 
-                        logging.info("Step: %s", str(num_steps))
+                        logging.info("Step: %s", str(self.step))
                         logging.info("Jax process id: %s", str(jax_process_index))
 
                         if jax_process_index == 0:
