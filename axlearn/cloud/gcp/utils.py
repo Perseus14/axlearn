@@ -12,8 +12,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Optional
 
-from tpu_info import device
-
 import google.auth
 import jax
 import requests
@@ -22,6 +20,7 @@ from google.auth import exceptions as gauthexceptions
 from google.auth import impersonated_credentials
 from google.auth.credentials import Credentials
 from requests.adapters import HTTPAdapter
+from tpu_info import device
 from urllib3.util.retry import Retry
 
 from axlearn.cloud.common.utils import Table, infer_cli_name, subprocess_run
@@ -368,6 +367,7 @@ def get_gcp_metadata(category, attribute, timeout=5, retries=3):
         logging.error("Failed to retrieve metadata for %s/%s: %s", category, attribute, e)
         return None
 
+
 def get_tpu_chip_type() -> device.TpuChip:
     """
     Automatically detect the TPU chip type based on JAX devices.
@@ -399,6 +399,7 @@ def get_tpu_chip_type() -> device.TpuChip:
         return device.TpuChip.V6E
     else:
         raise RuntimeError(f"Unknown TPU chip type detected: {tpu_version}")
+
 
 def is_tpu_device(acc_id):
     """

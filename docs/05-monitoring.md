@@ -23,7 +23,7 @@ We assume you have:
 ### Instructions
 
 ```bash
-#Copy and edit the default config file. 
+#Copy and edit the default config file.
 cp .axlearn/axlearn.default.config .axlearn/.axlearn.config
 ```
 For monitoring, make sure the following are present.
@@ -91,7 +91,7 @@ spec:
         - |
           echo "Job starting!";
           axlearn gcp config activate --label=axlearn-exp-trill;
-          python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://<train-dir>-axlearn/<train-dir>-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16 
+          python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://<train-dir>-axlearn/<train-dir>-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
           echo "Job completed!";
 
         env:

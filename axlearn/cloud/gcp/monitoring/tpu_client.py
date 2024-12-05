@@ -239,6 +239,7 @@ def get_chip_metrics_v2(
         logging.log_first_n(logging.ERROR, "Failed to fetch metrics from %s: %s", 5, addr, e)
         return []
 
+
 def is_tpu_active(
     local_device_id: int,
     chip_type: device.TpuChip,
@@ -249,7 +250,7 @@ def is_tpu_active(
     """
     Check if a TPU is active based on its local device ID. Tries both v1 (libtpu) and v2 (tpu-device-plugin) metrics.
     LIBTPU and tpu-device-plugin can only determine metrics of attached tpu devices in the currrent node.
-    
+
     Args:
         local_device_id: The local device ID of the TPU to check.
         chip_type: The TPU chip type to determine metrics interpretation.
@@ -268,9 +269,7 @@ def is_tpu_active(
             addr=addr_v1,
         )
         if 0 <= local_device_id < len(metrics_v1):
-            duty_cycle = (
-                metrics_v1[local_device_id].tensorcore_duty_cycle_percent
-            )
+            duty_cycle = metrics_v1[local_device_id].tensorcore_duty_cycle_percent
             if duty_cycle is not None and duty_cycle > 0:
                 return True
     except Exception as e:
@@ -278,18 +277,14 @@ def is_tpu_active(
 
     try:
         # Fallback to get_chip_metrics_v2
-        logging.info(
-            "Falling back to fetch metrics using get_chip_metrics_v2..."
-        )
+        logging.info("Falling back to fetch metrics using get_chip_metrics_v2...")
         metrics_v2 = get_chip_metrics_v2(
             metric_list=[MetricV2Name.TENSORCORE_DUTY_CYCLE_PERCENT],
             chip_type=chip_type,
             addr=addr_v2,
         )
         if 0 <= local_device_id < len(metrics_v2):
-            duty_cycle = (
-                metrics_v2[local_device_id].tensorcore_duty_cycle_percent
-            )
+            duty_cycle = metrics_v2[local_device_id].tensorcore_duty_cycle_percent
             if duty_cycle is not None and duty_cycle > 0:
                 return True
     except Exception as e:

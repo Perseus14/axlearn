@@ -22,11 +22,7 @@ from jax.experimental.pjit import pjit
 from axlearn.cloud.gcp.config import gcp_settings
 from axlearn.cloud.gcp.monitoring.monitor_workload import GCPWorkloadMonitoring
 from axlearn.cloud.gcp.monitoring.tpu_client import is_tpu_active
-from axlearn.cloud.gcp.utils import (
-    get_acc_ids_for_jax_process, 
-    get_tpu_chip_type, 
-    is_tpu_device
-)
+from axlearn.cloud.gcp.utils import get_acc_ids_for_jax_process, get_tpu_chip_type, is_tpu_device
 from axlearn.common import file_system as fs
 from axlearn.common import measurement, utils
 from axlearn.common.base_layer import ParameterSpec
@@ -579,7 +575,7 @@ class SpmdTrainer(Module):
             with self.checkpointer:
                 logging.info("Starting loop...")
                 start_time = time.perf_counter()
-                init_time = start_time # Separate variable for gcp monitoring
+                init_time = start_time  # Separate variable for gcp monitoring
                 num_steps = 0
                 output = None
                 stop_trace_step = None
@@ -612,22 +608,15 @@ class SpmdTrainer(Module):
                         jax_process_index = jax.process_index()
 
                         logging.info("Step: %s", str(num_steps))
-                        logging.info(
-                            "Jax process id: %s", str(jax_process_index)
-                        )
+                        logging.info("Jax process id: %s", str(jax_process_index))
 
                         if jax_process_index == 0:
-                            self.gcp_workload_monitor.send_performance_metric(
-                                perf_metric=step_time
-                            )
+                            self.gcp_workload_monitor.send_performance_metric(perf_metric=step_time)
 
-                        global_acc_ids = get_acc_ids_for_jax_process(
-                            jax_process_index
-                        )
+                        global_acc_ids = get_acc_ids_for_jax_process(jax_process_index)
 
                         logging.info(
-                            "Accelerator ids associated with Jax process id "
-                            "%s: %s",
+                            "Accelerator ids associated with Jax process id " "%s: %s",
                             str(jax_process_index),
                             ", ".join(map(str, global_acc_ids)),
                         )
@@ -640,9 +629,7 @@ class SpmdTrainer(Module):
                                     # chip type
                                     chip_type = get_tpu_chip_type()
                                     if is_tpu_active(
-                                        local_device_id=global_acc_ids.index(
-                                            int(acc_id)
-                                        ),
+                                        local_device_id=global_acc_ids.index(int(acc_id)),
                                         # TPU monitoring requires local
                                         # device id, not global. Workaround to
                                         # provide local device id is the
@@ -653,8 +640,7 @@ class SpmdTrainer(Module):
                                         chip_type=chip_type,
                                     ):
                                         logging.info(
-                                            "TPU device %s is active. "
-                                            "Sending heartbeat.",
+                                            "TPU device %s is active. " "Sending heartbeat.",
                                             str(acc_id),
                                         )
                                         self.gcp_workload_monitor.send_heartbeat_metric(
@@ -670,17 +656,18 @@ class SpmdTrainer(Module):
                                         )
                                     else:
                                         logging.warning(
-                                            "TPU device %s is inactive. Skipping heartbeat.", str(acc_id)
+                                            "TPU device %s is inactive. Skipping heartbeat.",
+                                            str(acc_id),
                                         )
                                 except Exception as e:
                                     logging.error(
-                                        "Error checking TPU activity for device %s: %s", str(acc_id), e
+                                        "Error checking TPU activity for device %s: %s",
+                                        str(acc_id),
+                                        e,
                                     )
                             else:
                                 # If not a TPU, send heartbeat as is
-                                logging.info(
-                                    "Non-TPU device %s. Sending heartbeat.", acc_id
-                                )
+                                logging.info("Non-TPU device %s. Sending heartbeat.", acc_id)
                                 self.gcp_workload_monitor.send_heartbeat_metric(
                                     acc_local_index=str(global_acc_ids.index(int(acc_id))),
                                     # Heartbeat metric requires local
