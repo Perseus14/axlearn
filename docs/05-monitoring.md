@@ -8,7 +8,7 @@ This document describes how to enable GCP workload monitoring.
 
 With GCP monitoring, you can currently send performance and heartbeat of your accelerators to Cloud monitoring to setup alerts and notifications.
 
-The following sections guide you through setting up and launching a job via Bastion.
+The following sections guide you through setting up and launching a job.
 
 <br>
 
