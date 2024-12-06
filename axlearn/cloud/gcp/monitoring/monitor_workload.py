@@ -85,7 +85,7 @@ class GCPWorkloadMonitoring:
         except Exception as e:
             logging.error("Unexpected Error. Metric: %s, Error: %s", metric_type, e)
 
-    def send_heartbeat_metric(self, acc_local_index: str, jax_process_index: str):
+    def send_heartbeat_metric(self, local_rank: str, global_rank: str):
         """Send heartbeat metric to Google Cloud Monitoring."""
 
         is_alive = True
@@ -102,7 +102,7 @@ class GCPWorkloadMonitoring:
                 metric=metric_pb2.Metric(
                     type=metric_type,
                     labels={
-                        "gpu_index": acc_local_index,
+                        "gpu_index": local_rank,
                         "instance_id": get_gcp_metadata(category="instance", attribute="id"),
                     },
                 ),
@@ -113,7 +113,7 @@ class GCPWorkloadMonitoring:
                         "location": self.zone,
                         "workload_id": self.workload_id,
                         "replica_id": self.replica_id,
-                        "process_id": jax_process_index,
+                        "process_id": global_rank,
                     },
                 ),
                 points=[
@@ -158,7 +158,7 @@ def main(argv):
         monitor.check_connectivity()
         # Example: Send metrics
         monitor.send_performance_metric(perf_metric=0.123)
-        monitor.send_heartbeat_metric(acc_local_index="0", jax_process_index="0")
+        monitor.send_heartbeat_metric(local_rank="0", global_rank="0")
 
 
 if __name__ == "__main__":
