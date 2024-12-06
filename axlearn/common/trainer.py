@@ -621,7 +621,7 @@ class SpmdTrainer(Module):
                                 for i, device in enumerate(local_devices)
                                 if device.process_index == jax_process_index
                             ),
-                            None,
+                            0, # Default to 0 if not found -> Might not be needed but failsafe
                         )
 
                         logging.info(
