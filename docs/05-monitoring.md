@@ -30,8 +30,9 @@ cp .axlearn/axlearn.default.config .axlearn/.axlearn.config
 For monitoring, make sure the following are present.
 
 ```bash
-project='my-gcp-project'
-zone='my-zone'
+project="my-gcp-project"
+zone="my-zone"
+labels="my-unique-label"
 enable_gcp_workload_monitoring = true
 workload_id = "my_workload_id"
 replica_id = "0"
@@ -41,6 +42,11 @@ Build a Docker image using the `Dockerfile.tpu` in the repo:
 ```bash
 docker build -f Dockerfile.tpu --target tpu -t <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest .
 docker push <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest
+```
+
+Create a Kubernetes secret to provide access to your GCS bucket:
+```bash
+kubectl create secret generic gcs-key --from-file=</path/to/your-service-account-key>.json
 ```
 
 Next, we create a GKE Job yaml file, which defines the cluster, nodepools, topology etc:
@@ -91,7 +97,7 @@ spec:
         - -c
         - |
           echo "Job starting!";
-          axlearn gcp config activate --label=axlearn-exp-trill;
+          axlearn gcp config activate --label=my-unique-label;
           python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://<train-dir>-axlearn/<train-dir>-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
           echo "Job completed!";
 
@@ -101,7 +107,7 @@ spec:
         - name: JAX_USE_PJRT_C_API_ON_TPU
           value: "1"
         - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: "/secrets/key.json"  # Path to the mounted service account key
+          value: "/secrets/your-service-account-key.json"  # Path to the mounted service account key
         volumeMounts:
         - name: gcs-key
           mountPath: "/secrets"
@@ -169,8 +175,8 @@ spec:
                 image: <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest
                 ports:
                 - containerPort: 8471  # Default TPU communication port
-                - containerPort: 9431  # TPU metrics port for monitoring
-                - containerPort: 8431  # Additional port for TPU communication
+                - containerPort: 8431  # TPU metrics port for monitoring
+                - containerPort: 2112  # Additional port for TPU monitoring
                 command:
                 - /bin/bash
                 - -c
@@ -185,7 +191,7 @@ spec:
                 - name: JAX_USE_PJRT_C_API_ON_TPU
                   value: "1"
                 - name: GOOGLE_APPLICATION_CREDENTIALS
-                  value: "/secrets/<your-service-account--key>.json"  # Path to the mounted service account key
+                  value: "/secrets/<your-service-account-key>.json"  # Path to the mounted service account key
                 volumeMounts:
                 - name: gcs-key
                   mountPath: "/secrets"

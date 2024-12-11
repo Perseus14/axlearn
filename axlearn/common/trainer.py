@@ -611,18 +611,7 @@ class SpmdTrainer(Module):
                         if jax_process_index == 0:
                             self.gcp_workload_monitor.send_performance_metric(perf_metric=step_time)
 
-                        # Get devices local to the current host
-                        local_devices = jax.local_devices()
-
-                        # Find the local rank of the current process
-                        local_rank = next(
-                            (
-                                i
-                                for i, device in enumerate(local_devices)
-                                if device.process_index == jax_process_index
-                            ),
-                            0, # Default to 0 if not found -> Might not be needed but failsafe
-                        )
+                        local_rank = 0 # Local Rank is always 0 for now
 
                         logging.info(
                             "Jax process %s alive. Local Rank: %s. Sending heartbeat.", 

@@ -1,0 +1,71 @@
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: my-unique-id-multislice-jobset
+  namespace: default
+  annotations:
+    alpha.jobset.sigs.k8s.io/exclusive-topology: cloud.google.com/gke-nodepool
+spec:
+  failurePolicy:
+    maxRestarts: 4
+  replicatedJobs:
+    - name: my-unique-id-multislice-job
+      replicas: 2  # Each slice corresponds to a replicated job
+      template:
+        spec:
+          completionMode: Indexed  # Required for TPU workloads
+          backoffLimit: 0
+          completions: 4
+          parallelism: 4
+          template:
+            metadata:
+              labels:
+                job-name: my-unique-id-multislice-job
+            spec:
+              restartPolicy: Never
+              subdomain: my-unique-id-headless-svc
+              tolerations:
+              - key: "google.com/tpu"
+                operator: "Exists"
+                effect: "NoSchedule"
+              nodeSelector:
+                cloud.google.com/gke-tpu-accelerator: tpu-v6e-slice
+                cloud.google.com/gke-tpu-topology: 4x4
+              dnsPolicy: ClusterFirstWithHostNet  # Ensure proper name resolution for TPU pods
+              hostNetwork: true
+              containers:
+              - name: test-container
+                image: us-east5-docker.pkg.dev/my-gcp-project/my-folder/tpu:latest
+                ports:
+                - containerPort: 8471  # Default TPU communication port
+                - containerPort: 8431  # TPU metrics port for monitoring
+                - containerPort: 2112  # Additional port for TPU monitoring
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  env
+                  echo "Job starting!";
+                  axlearn gcp config activate --label=my-unique-label;
+                  python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://my-bucket/my-folder-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
+                  echo "Job completed!";
+                env:
+                - name: JAX_PLATFORMS
+                  value: "tpu"  # Let JAX auto-detect TPU
+                - name: JAX_USE_PJRT_C_API_ON_TPU
+                  value: "1"
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: "/secrets/my-service-account-key.json"  # Path to the mounted service account key
+                volumeMounts:
+                - name: gcs-key
+                  mountPath: "/secrets"
+                  readOnly: true
+                resources:
+                  requests:
+                    google.com/tpu: 4
+                  limits:
+                    google.com/tpu: 4
+              volumes:
+              - name: gcs-key
+                secret:
+                  secretName: gcs-key
