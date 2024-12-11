@@ -35,11 +35,10 @@ spec:
               hostNetwork: true
               containers:
               - name: test-container
-                image: us-east5-docker.pkg.dev/my-gcp-project/my-folder/tpu:latest
+                image: us-east5-docker.pkg.dev/my-gcp-project/my-repo/tpu:latest
                 ports:
                 - containerPort: 8471  # Default TPU communication port
                 - containerPort: 8431  # TPU metrics port for monitoring
-                - containerPort: 2112  # Additional port for TPU monitoring
                 command:
                 - /bin/bash
                 - -c
