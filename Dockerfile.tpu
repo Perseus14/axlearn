@@ -49,7 +49,7 @@ ENV PIP_FIND_LINKS=https://storage.googleapis.com/jax-releases/libtpu_releases.h
 # Jax will fallback to CPU when run on a machine without TPU.
 COPY axlearn/cli /root/axlearn/cli
 COPY axlearn/cloud /root/axlearn/cloud
-RUN pip install .[core,gcp,tpu]
+RUN pip install .[core,grain,gcp,tpu]
 COPY . .
 RUN if [ -n "$EXTRAS" ]; then pip install .[$EXTRAS]; fi
 
