@@ -34,8 +34,8 @@ project="my-gcp-project"
 zone="my-zone"
 labels="my-unique-label"
 enable_gcp_workload_monitoring = true
-workload_id = "my_workload_id"
-replica_id = "0"
+workload_id = "my_workload_id" # Optional (default: jobset_name or job_name or "unknown")
+replica_id = "0" # Optional (default: "0")
 ```
 
 Build a Docker image using the `Dockerfile.tpu` in the repo:
@@ -49,7 +49,100 @@ Create a Kubernetes secret to provide access to your GCS bucket:
 kubectl create secret generic gcs-key --from-file=</path/to/your-service-account-key>.json
 ```
 
-Next, we create a GKE Job yaml file, which defines the cluster, nodepools, topology etc:
+(Recommended) Multi-Slice Workload Observability
+
+Create a Jobset yaml file <jobset>.yaml
+
+```yaml
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: axlearn-multislice-jobset
+  namespace: default
+  annotations:
+    alpha.jobset.sigs.k8s.io/exclusive-topology: cloud.google.com/gke-nodepool
+  labels:
+    jobset-name: my-unique-id-multislice-jobset
+spec:
+  failurePolicy:
+    maxRestarts: 4
+  replicatedJobs:
+    - name: axlearn-multislice-job
+      replicas: 2  # Each slice corresponds to a replicated job
+      template:
+        spec:
+          completionMode: Indexed  # Required for TPU workloads
+          backoffLimit: 0
+          completions: 4
+          parallelism: 4
+          template:
+            metadata:
+              labels:
+                job-name: axlearn-multislice-job
+                jobset-name: axlearn-multislice-jobset
+            spec:
+              restartPolicy: Never
+              subdomain: axlearn-headless-svc
+              tolerations:
+              - key: "google.com/tpu"
+                operator: "Exists"
+                effect: "NoSchedule"
+              nodeSelector:
+                cloud.google.com/gke-tpu-accelerator: tpu-v6e-slice
+                cloud.google.com/gke-tpu-topology: 4x4
+              dnsPolicy: ClusterFirstWithHostNet  # Ensure proper name resolution for TPU pods
+              hostNetwork: true
+              containers:
+              - name: test-container
+                image: <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest
+                ports:
+                - containerPort: 8471  # Default TPU communication port
+                - containerPort: 8431  # TPU metrics port for monitoring
+                command:
+                - /bin/bash
+                - -c
+                - |
+                  echo "Job starting!";
+                  python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://<your-bucket-name>/<dir-name>-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
+                  echo "Job completed!";
+                env:
+                - name: JOBSET_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['jobset.sigs.k8s.io/jobset-name'] # Fetch Jobset name
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['job-name'] # Fetch Job name
+                - name: JAX_PLATFORMS
+                  value: "tpu"  # Let JAX auto-detect TPU
+                - name: JAX_USE_PJRT_C_API_ON_TPU
+                  value: "1"
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: "/secrets/<your-service-account-key>.json"  # Path to the mounted service account key
+                volumeMounts:
+                - name: gcs-key
+                  mountPath: "/secrets"
+                  readOnly: true
+                resources:
+                  requests:
+                    google.com/tpu: 4
+                  limits:
+                    google.com/tpu: 4
+              volumes:
+              - name: gcs-key
+                secret:
+                  secretName: gcs-key
+```
+
+Apply, the jobset on the GKE cluster:
+```bash
+kubectl apply -f <jobset>.yaml
+```
+
+(Optional) Single-Slice Workload Observability
+
+Create a GKE Job yaml file <job-name>.yaml:
 ```yaml
 apiVersion: v1
 kind: Service
@@ -91,7 +184,7 @@ spec:
         image: <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest
         ports:
         - containerPort: 8471  # Default TPU communication port
-        - containerPort: 9431  # TPU metrics port for monitoring
+        - containerPort: 8431  # TPU metrics port for monitoring
         command:
         - /bin/bash
         - -c
@@ -100,8 +193,11 @@ spec:
           axlearn gcp config activate --label=my-unique-label;
           python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://<train-dir>-axlearn/<train-dir>-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
           echo "Job completed!";
-
         env:
+        - name: JOB_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['job-name'] # Fetch Job name
         - name: JAX_PLATFORMS
           value: "tpu"  # Let JAX auto-detect TPU
         - name: JAX_USE_PJRT_C_API_ON_TPU
@@ -128,86 +224,4 @@ Please modify the yaml file as needed.
 Finally, launch the GKE service:
 ```bash
 kubectl apply -f <job-name>.yaml
-```
-
-(Optional) Multi-Slice Workload Observability
-
-Create a Jobset yaml file <jobset>.yaml
-
-```yaml
-apiVersion: jobset.x-k8s.io/v1alpha2
-kind: JobSet
-metadata:
-  name: axlearn-multislice-jobset
-  namespace: default
-  annotations:
-    alpha.jobset.sigs.k8s.io/exclusive-topology: cloud.google.com/gke-nodepool
-spec:
-  failurePolicy:
-    maxRestarts: 4
-  replicatedJobs:
-    - name: axlearn-multislice-job
-      replicas: 2  # Each slice corresponds to a replicated job
-      template:
-        spec:
-          completionMode: Indexed  # Required for TPU workloads
-          backoffLimit: 0
-          completions: 4
-          parallelism: 4
-          template:
-            metadata:
-              labels:
-                job-name: axlearn-multislice-job
-            spec:
-              restartPolicy: Never
-              subdomain: axlearn-headless-svc
-              tolerations:
-              - key: "google.com/tpu"
-                operator: "Exists"
-                effect: "NoSchedule"
-              nodeSelector:
-                cloud.google.com/gke-tpu-accelerator: tpu-v6e-slice
-                cloud.google.com/gke-tpu-topology: 4x4
-              dnsPolicy: ClusterFirstWithHostNet  # Ensure proper name resolution for TPU pods
-              hostNetwork: true
-              containers:
-              - name: test-container
-                image: <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest
-                ports:
-                - containerPort: 8471  # Default TPU communication port
-                - containerPort: 8431  # TPU metrics port for monitoring
-                - containerPort: 2112  # Additional port for TPU monitoring
-                command:
-                - /bin/bash
-                - -c
-                - |
-                  env
-                  echo "Job starting!";
-                  python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://<your-bucket-name>/<dir-name>-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
-                  echo "Job completed!";
-                env:
-                - name: JAX_PLATFORMS
-                  value: "tpu"  # Let JAX auto-detect TPU
-                - name: JAX_USE_PJRT_C_API_ON_TPU
-                  value: "1"
-                - name: GOOGLE_APPLICATION_CREDENTIALS
-                  value: "/secrets/<your-service-account-key>.json"  # Path to the mounted service account key
-                volumeMounts:
-                - name: gcs-key
-                  mountPath: "/secrets"
-                  readOnly: true
-                resources:
-                  requests:
-                    google.com/tpu: 4
-                  limits:
-                    google.com/tpu: 4
-              volumes:
-              - name: gcs-key
-                secret:
-                  secretName: gcs-key
-```
-
-Apply, the jobset on the GKE cluster:
-```bash
-kubectl apply -f <jobset>.yaml
 ```
