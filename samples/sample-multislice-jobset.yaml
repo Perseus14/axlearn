@@ -5,8 +5,6 @@ metadata:
   namespace: default
   annotations:
     alpha.jobset.sigs.k8s.io/exclusive-topology: cloud.google.com/gke-nodepool
-  labels:
-    jobset-name: my-unique-id-multislice-jobset
 spec:
   failurePolicy:
     maxRestarts: 4
@@ -53,7 +51,7 @@ spec:
                 - name: JOBSET_NAME
                   valueFrom:
                     fieldRef:
-                      fieldPath: metadata.labels['jobset-name'] # Fetch Jobset name
+                      fieldPath: metadata.labels['jobset.sigs.k8s.io/jobset-name'] # Fetch Jobset name
                 - name: JOB_NAME
                   valueFrom:
                     fieldRef:

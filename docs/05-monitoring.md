@@ -79,6 +79,7 @@ spec:
             metadata:
               labels:
                 job-name: axlearn-multislice-job
+                jobset-name: axlearn-multislice-jobset
             spec:
               restartPolicy: Never
               subdomain: axlearn-headless-svc
@@ -97,7 +98,6 @@ spec:
                 ports:
                 - containerPort: 8471  # Default TPU communication port
                 - containerPort: 8431  # TPU metrics port for monitoring
-                - containerPort: 2112  # Additional port for TPU monitoring
                 command:
                 - /bin/bash
                 - -c
@@ -109,7 +109,7 @@ spec:
                 - name: JOBSET_NAME
                   valueFrom:
                     fieldRef:
-                      fieldPath: metadata.labels['jobset-name'] # Fetch Jobset name
+                      fieldPath: metadata.labels['jobset.sigs.k8s.io/jobset-name'] # Fetch Jobset name
                 - name: JOB_NAME
                   valueFrom:
                     fieldRef:
@@ -184,7 +184,7 @@ spec:
         image: <zone>-docker.pkg.dev/<project-id>/<repo>/tpu:latest
         ports:
         - containerPort: 8471  # Default TPU communication port
-        - containerPort: 9431  # TPU metrics port for monitoring
+        - containerPort: 8431  # TPU metrics port for monitoring
         command:
         - /bin/bash
         - -c

@@ -3,8 +3,8 @@ Module for GCP Workload Monitoring, enabling performance and heartbeat metrics
 to be sent to Google Cloud Monitoring.
 """
 
-import time
 import os
+import time
 
 from absl import app, logging
 from google.api import metric_pb2, monitored_resource_pb2
@@ -149,13 +149,8 @@ def main(argv):
     enable_gcp_workload_monitoring = gcp_settings("enable_gcp_workload_monitoring", default=False)
 
     if enable_gcp_workload_monitoring:
-        workload_id = (
-                os.environ.get("JOBSET_NAME")
-                or os.environ.get("JOB_NAME")
-                or "unknown"
-            )
+        workload_id = os.environ.get("JOBSET_NAME") or os.environ.get("JOB_NAME") or "unknown"
         workload_id = gcp_settings("workload_id", default=workload_id)
-            
         monitor = GCPWorkloadMonitoring(
             project_id=gcp_settings("project", required=True),
             zone=gcp_settings("zone", required=True),

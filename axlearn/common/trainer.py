@@ -220,11 +220,7 @@ class SpmdTrainer(Module):
         if self.enable_gcp_workload_monitoring:
             self.gcp_project_id = gcp_settings("project", required=True)
             self.gcp_zone = gcp_settings("zone", required=True)
-            workload_id = (
-                os.environ.get("JOBSET_NAME")
-                or os.environ.get("JOB_NAME")
-                or "unknown"
-            )
+            workload_id = os.environ.get("JOBSET_NAME") or os.environ.get("JOB_NAME") or "unknown"
             self.workload_id = gcp_settings("workload_id", default=workload_id)
             self.replica_id = gcp_settings("replica_id", default="0")
 
@@ -616,12 +612,12 @@ class SpmdTrainer(Module):
                         if jax_process_index == 0:
                             self.gcp_workload_monitor.send_performance_metric(perf_metric=step_time)
 
-                        local_rank = 0 # Local Rank is always 0 for now
+                        local_rank = 0  # Local Rank is always 0 for now
 
                         logging.info(
-                            "Jax process %s alive. Local Rank: %s. Sending heartbeat.", 
+                            "Jax process %s alive. Local Rank: %s. Sending heartbeat.",
                             str(jax_process_index),
-                            str(local_rank)
+                            str(local_rank),
                         )
 
                         self.gcp_workload_monitor.send_heartbeat_metric(
