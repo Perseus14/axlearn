@@ -5,6 +5,8 @@ metadata:
   namespace: default
   annotations:
     alpha.jobset.sigs.k8s.io/exclusive-topology: cloud.google.com/gke-nodepool
+  labels:
+    jobset-name: my-unique-id-multislice-jobset
 spec:
   failurePolicy:
     maxRestarts: 4
@@ -35,7 +37,7 @@ spec:
               hostNetwork: true
               containers:
               - name: test-container
-                image: us-east5-docker.pkg.dev/my-gcp-project/my-repo/tpu:latest
+                image: my-zone-docker.pkg.dev/my-gcp-project/my-repo/tpu:latest
                 ports:
                 - containerPort: 8471  # Default TPU communication port
                 - containerPort: 8431  # TPU metrics port for monitoring
@@ -43,12 +45,19 @@ spec:
                 - /bin/bash
                 - -c
                 - |
-                  env
                   echo "Job starting!";
                   axlearn gcp config activate --label=my-unique-label;
                   python3 -m axlearn.common.launch_trainer_main --module=text.gpt.c4_trainer --config=fuji-7B-v2-flash --trainer_dir=gs://my-bucket/my-folder-gke-v6e-7b/ --data_dir=gs://axlearn-public/tensorflow_datasets --jax_backend=tpu --mesh_selector=tpu-v6e-16 --trace_at_steps=16
                   echo "Job completed!";
                 env:
+                - name: JOBSET_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['jobset-name'] # Fetch Jobset name
+                - name: JOB_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['job-name'] # Fetch Job name
                 - name: JAX_PLATFORMS
                   value: "tpu"  # Let JAX auto-detect TPU
                 - name: JAX_USE_PJRT_C_API_ON_TPU

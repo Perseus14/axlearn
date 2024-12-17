@@ -5,7 +5,7 @@
 import contextlib
 import itertools
 import math
-import os.path
+import os
 import signal
 import threading
 import time
@@ -220,8 +220,13 @@ class SpmdTrainer(Module):
         if self.enable_gcp_workload_monitoring:
             self.gcp_project_id = gcp_settings("project", required=True)
             self.gcp_zone = gcp_settings("zone", required=True)
-            self.workload_id = gcp_settings("workload_id", required=True)
-            self.replica_id = gcp_settings("replica_id", required=True)
+            workload_id = (
+                os.environ.get("JOBSET_NAME")
+                or os.environ.get("JOB_NAME")
+                or "unknown"
+            )
+            self.workload_id = gcp_settings("workload_id", default=workload_id)
+            self.replica_id = gcp_settings("replica_id", default="0")
 
             # Initialize Google Cloud Monitoring client if GCP reporting is enabled.
             self.gcp_workload_monitor = GCPWorkloadMonitoring(
