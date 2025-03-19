@@ -13,8 +13,8 @@
         --recorder_spec=name=my-run-with-goodput \
         --recorder_spec=upload_dir=my-output-directory/summaries \
         --recorder_spec=upload_interval=30 \
-        --recorder_spec=include_step_deviation_metrics=True \
-        --recorder_spec=step_deviation_metrics_interval=30 \
+        --recorder_spec=include_step_deviation=True \
+        --recorder_spec=step_deviation_interval_seconds=30 \
         --recorder_spec=enable_gcp_goodput_metrics=True \
         --recorder_spec=enable_gcp_step_deviation_metrics=True
 
@@ -43,9 +43,9 @@ class GoodputRecorder(measurement.Recorder):
         Attributes:
             upload_dir: Directory to store metrics for the monitor.
             upload_interval: Time interval (seconds) for monitoring uploads.
-            include_step_deviation_metrics: Whether to include step deviation
+            include_step_deviation: Whether to include step deviation
               metrics in the upload.
-            step_deviation_metrics_interval: Time interval (seconds) for step
+            step_deviation_interval_seconds: Time interval (seconds) for step
               deviation metrics uploads.
             enable_gcp_goodput_metrics: Whether to push Goodput metrics to
               Google Cloud Monitoring.
@@ -55,8 +55,8 @@ class GoodputRecorder(measurement.Recorder):
 
         upload_dir: Required[str] = REQUIRED
         upload_interval: Required[int] = REQUIRED
-        include_step_deviation_metrics: bool = True  # Default to True
-        step_deviation_metrics_interval: int = 30  # Default to 30 seconds
+        include_step_deviation: bool = True  # Default to True
+        step_deviation_interval_seconds: int = 30  # Default to 30 seconds
         enable_gcp_goodput_metrics: bool = True  # Default to True
         enable_gcp_step_deviation_metrics: bool = True  # Default to True
 
@@ -70,9 +70,9 @@ class GoodputRecorder(measurement.Recorder):
          - upload_dir: The directory to write Tensorboard data to.
          - upload_interval: The time interval in seconds at which to query and upload data
            to Tensorboard.
-         - include_step_deviation_metrics: Whether to include step deviation
+         - include_step_deviation: Whether to include step deviation
             metrics in the upload.
-        - step_deviation_metrics_interval: Time interval (seconds) for step
+        - step_deviation_interval_seconds: Time interval (seconds) for step
             deviation metrics uploads.
         - enable_gcp_goodput_metrics: Whether to push Goodput metrics to Google Cloud
             Monitoring.
@@ -155,15 +155,15 @@ class GoodputRecorder(measurement.Recorder):
                     upload_interval=int(cfg.upload_interval),
                     monitoring_enabled=(jax.process_index() == 0),
                     include_badput_breakdown=True,
-                    include_step_deviation_metrics=cfg.include_step_deviation_metrics,
-                    step_deviation_metrics_interval=int(
-                        cfg.step_deviation_metrics_interval
+                    include_step_deviation=cfg.include_step_deviation,
+                    step_deviation_interval_seconds=int(
+                        cfg.step_deviation_interval_seconds
                     ),
                     gcp_options=gcp_options,
                 )
 
             self._monitor.start_goodput_uploader(*args, **kwargs)
             logging.info("Started Goodput upload to Tensorboard in the background!")
-            if cfg.include_step_deviation_metrics:
+            if cfg.include_step_deviation:
               self._monitor.start_step_deviation_uploader(*args, **kwargs)
               logging.info("Started Step Deviation upload to Tensorboard in the background!")
