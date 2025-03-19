@@ -155,6 +155,10 @@ class GoodputRecorder(measurement.Recorder):
                     upload_interval=int(cfg.upload_interval),
                     monitoring_enabled=(jax.process_index() == 0),
                     include_badput_breakdown=True,
+                    include_step_deviation_metrics=cfg.include_step_deviation_metrics,
+                    step_deviation_metrics_interval=int(
+                        cfg.step_deviation_metrics_interval
+                    ),
                     gcp_options=gcp_options,
                 )
 
