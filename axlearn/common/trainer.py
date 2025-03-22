@@ -581,7 +581,6 @@ class SpmdTrainer(Module):
                 stop_trace_step = None
 
                 for input_batch in self.input.batches(self._input_iter):
-                    self._maybe_record_event(measurement.Event.START_STEP, self._step)
                     logging.log_first_n(
                         logging.INFO, "input_batch=%s", 3, utils.shapes(input_batch)
                     )
@@ -591,6 +590,7 @@ class SpmdTrainer(Module):
 
                     self._step = self._step + 1
                     self.vlog(3, "Start step %s", self.step)
+                    self._maybe_record_event(measurement.Event.START_STEP, self._step)
                     output = self._run_step(
                         utils.host_to_global_device_array(
                             input_batch,
