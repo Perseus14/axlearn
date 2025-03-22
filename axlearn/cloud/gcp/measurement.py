@@ -80,7 +80,18 @@ class GoodputRecorder(measurement.Recorder):
             Cloud Monitoring.
         """
         cfg: measurement.Recorder.Config = cls.default_config()
-        cfg = maybe_set_config(cfg, **parse_kv_flags(fv.recorder_spec, delimiter="="))
+        kwargs = parse_kv_flags(fv.recorder_spec, delimiter="=")
+
+        boolean_flags = [
+            "include_step_deviation",
+            "enable_gcp_goodput_metrics",
+            "enable_gcp_step_deviation_metrics",
+        ]
+        for flag in boolean_flags:
+          if flag in kwargs:
+            kwargs[flag] = kwargs[flag].lower() == "true"
+
+        cfg = maybe_set_config(cfg, **kwargs)
         return cfg.instantiate()
 
     def __init__(self, cfg):

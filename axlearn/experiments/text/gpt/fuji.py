@@ -284,9 +284,9 @@ def get_trainer_kwargs(
             max_sequence_length=64,
             train_batch_size=32,
             eval_batch_size=32,
-            max_step=30000,
-            eval_every_n_steps=1500,
-            save_every_n_steps=500,
+            max_step=10000000,
+            eval_every_n_steps=2000000,
+            save_every_n_steps=50000,
             mesh_shape=mesh_shape_from_axes(data=-1),
         )
     elif model_size == "1B":
@@ -303,8 +303,10 @@ def get_trainer_kwargs(
             ),
             learner_kwargs=dict(peak_lr=3e-4, weight_decay=0.1),
             max_sequence_length=max_sequence_length,
-            train_batch_size=train_batch_size,
-            max_step=max_step,
+            train_batch_size=1,
+            max_step=100000,
+            eval_every_n_steps=100001,
+            save_every_n_steps=5000,
             mesh_shape=mesh_shape_from_axes(data=-1, fsdp=8),
             mesh_rules=(
                 (
