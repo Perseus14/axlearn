@@ -164,7 +164,7 @@ class GoodputRecorder(measurement.Recorder):
                     logger_name=f"goodput_logger_{cfg.name}",
                     tensorboard_dir=cfg.upload_dir,
                     upload_interval=int(cfg.upload_interval),
-                    monitoring_enabled=(jax.process_index() == 0),
+                    monitoring_enabled=True,
                     include_badput_breakdown=True,
                     include_step_deviation=cfg.include_step_deviation,
                     step_deviation_interval_seconds=int(
@@ -174,7 +174,7 @@ class GoodputRecorder(measurement.Recorder):
                 )
 
             self._monitor.start_goodput_uploader(*args, **kwargs)
-            logging.info("Started Goodput upload to Tensorboard in the background!")
+            logging.info("Started Goodput upload to Tensorboard & GCM in the background!")
             if cfg.include_step_deviation:
               self._monitor.start_step_deviation_uploader(*args, **kwargs)
-              logging.info("Started Step Deviation upload to Tensorboard in the background!")
+              logging.info("Started Step Deviation upload to Tensorboard & GCM in the background!")
